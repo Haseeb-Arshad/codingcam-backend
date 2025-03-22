@@ -153,32 +153,58 @@ const ActivityController = {
       existingSession.durationSeconds = duration_seconds;
       existingSession.filesCount = files_count;
       
-      // Merge language data
-      for (const [lang, seconds] of Object.entries(languages || {})) {
-        if (existingSession.languages.has(lang)) {
-          // Update existing language
-          existingSession.languages.set(lang, seconds);
-        } else {
-          // Add new language
-          existingSession.languages.set(lang, seconds);
+      // Process language data - make sure to use Map operations
+      try {
+        if (languages) {
+          Object.entries(languages).forEach(([lang, seconds]) => {
+            if (typeof seconds !== 'number') return;
+            
+            // Use Map's set method to update or add entries
+            existingSession.languages.set(lang, seconds);
+          });
         }
+      } catch (error) {
+        Logger.error(`Error updating language data: ${error.message}`);
       }
       
-      // Merge file data
-      for (const [filePath, fileData] of Object.entries(files || {})) {
-        if (existingSession.files.has(filePath)) {
-          // Update existing file
-          const existingFile = existingSession.files.get(filePath);
-          existingFile.edits = fileData.edits || existingFile.edits;
-          existingFile.duration = fileData.duration || existingFile.duration;
-          existingFile.keystrokes = fileData.keystrokes || existingFile.keystrokes;
-          existingFile.lines = fileData.lines || existingFile.lines;
-          existingSession.files.set(filePath, existingFile);
-        } else {
-          // Add new file
-          existingSession.files.set(filePath, fileData);
+      // Process file data - make sure to use Map operations
+      try {
+        if (files) {
+          Object.entries(files).forEach(([filePath, fileData]) => {
+            // Sanitize file path for MongoDB
+            const sanitizedPath = filePath.replace(/\\/g, '/');
+            
+            if (existingSession.files.has(sanitizedPath)) {
+              // Get and update existing file data
+              const existingFile = existingSession.files.get(sanitizedPath);
+              
+              // Update properties if provided, otherwise keep existing values
+              existingFile.edits = fileData.edits || existingFile.edits;
+              existingFile.duration = fileData.duration || existingFile.duration;
+              existingFile.keystrokes = fileData.keystrokes || existingFile.keystrokes;
+              existingFile.lines = fileData.lines || existingFile.lines;
+              
+              // Set updated file data back into the map
+              existingSession.files.set(sanitizedPath, existingFile);
+            } else {
+              // Add new file data
+              existingSession.files.set(sanitizedPath, {
+                edits: fileData.edits || 0,
+                duration: fileData.duration || 0,
+                language: fileData.language || 'unknown',
+                lines: fileData.lines || 0,
+                keystrokes: fileData.keystrokes || 0
+              });
+            }
+          });
         }
+      } catch (error) {
+        Logger.error(`Error updating file data: ${error.message}`);
       }
+      
+      // Mark the document as modified to ensure Mongoose saves the changes
+      existingSession.markModified('files');
+      existingSession.markModified('languages');
       
       // Save the updated session
       await existingSession.save();

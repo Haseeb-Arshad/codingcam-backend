@@ -257,6 +257,38 @@ const ActivityService = {
         data.durationSeconds : 
         Math.floor((endTime - startTime) / 1000);
       
+      // Convert objects to Maps for Mongoose
+      const filesMap = new Map();
+      const languagesMap = new Map();
+      
+      // Process files
+      try {
+        Object.entries(files).forEach(([filePath, fileData]) => {
+          // Sanitize file path to remove problematic characters for MongoDB
+          const sanitizedPath = filePath.replace(/\\/g, '/');
+          filesMap.set(sanitizedPath, {
+            edits: fileData.edits || 0,
+            duration: fileData.duration || 0,
+            language: fileData.language || 'unknown',
+            lines: fileData.lines || 0,
+            keystrokes: fileData.keystrokes || 0
+          });
+        });
+      } catch (e) {
+        Logger.warn(`Error processing files data: ${e.message}`);
+      }
+      
+      // Process languages
+      try {
+        Object.entries(languages).forEach(([language, seconds]) => {
+          if (language && typeof seconds === 'number') {
+            languagesMap.set(language, seconds);
+          }
+        });
+      } catch (e) {
+        Logger.warn(`Error processing language data: ${e.message}`);
+      }
+      
       // Prepare session data with defaults for optional fields
       const sessionData = {
         userId: data.userId,
@@ -265,8 +297,8 @@ const ActivityService = {
         endTime,
         durationSeconds,
         filesCount: data.filesCount || Object.keys(files).length,
-        languages,
-        files,
+        languages: languagesMap,
+        files: filesMap,
         platform: data.platform || 'unknown',
         editor: data.editor || 'unknown',
         isOfflineSync: !!data.isOfflineSync
@@ -291,9 +323,9 @@ const ActivityService = {
       if (!dailySummary) {
         const languageEntries = [];
         
-        // Ensure languages are properly formatted
+        // Ensure languages are properly formatted for array storage
         try {
-          for (const [name, seconds] of Object.entries(languages)) {
+          for (const [name, seconds] of languagesMap.entries()) {
             if (name && typeof seconds === 'number') {
               languageEntries.push({
                 name,
@@ -319,8 +351,8 @@ const ActivityService = {
         
         // Update language stats
         try {
-          Object.entries(languages).forEach(([name, seconds]) => {
-            if (!name || typeof seconds !== 'number') return;
+          for (const [name, seconds] of languagesMap.entries()) {
+            if (!name || typeof seconds !== 'number') continue;
             
             const langIndex = dailySummary.languages.findIndex(l => l.name === name);
             
@@ -332,7 +364,7 @@ const ActivityService = {
                 seconds
               });
             }
-          });
+          }
         } catch (e) {
           Logger.warn(`Error updating language stats: ${e.message}`);
         }

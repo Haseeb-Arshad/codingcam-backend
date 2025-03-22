@@ -226,6 +226,12 @@ const ActivityService = {
     try {
       Logger.debug(`Recording coding session for user ${data.userId}, session ${data.sessionId}`);
       
+      // Validate required fields
+      if (!data.userId || !data.sessionId || !data.startTime || !data.endTime) {
+        Logger.error(`Missing required fields for session ${data.sessionId || 'unknown'}`);
+        throw new Error('Missing required fields: userId, sessionId, startTime, and endTime are required');
+      }
+      
       // Check if session with this ID already exists to avoid duplicates
       const existingSession = await CodingSession.findOne({ sessionId: data.sessionId });
       if (existingSession) {
@@ -233,26 +239,44 @@ const ActivityService = {
         return existingSession;
       }
       
-      // Prepare session data
+      // Ensure files and languages are valid objects
+      const files = data.files || {};
+      const languages = data.languages || {};
+      
+      // Ensure dates are valid Date objects
+      const startTime = new Date(data.startTime);
+      const endTime = new Date(data.endTime);
+      
+      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+        Logger.error(`Invalid date format for session ${data.sessionId}`);
+        throw new Error('Invalid date format for startTime or endTime');
+      }
+      
+      // Ensure durationSeconds is a number
+      const durationSeconds = typeof data.durationSeconds === 'number' ? 
+        data.durationSeconds : 
+        Math.floor((endTime - startTime) / 1000);
+      
+      // Prepare session data with defaults for optional fields
       const sessionData = {
         userId: data.userId,
         sessionId: data.sessionId,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        durationSeconds: data.durationSeconds,
-        filesCount: data.filesCount,
-        languages: data.languages,
-        files: data.files,
-        platform: data.platform,
-        editor: data.editor,
-        isOfflineSync: data.isOfflineSync
+        startTime,
+        endTime,
+        durationSeconds,
+        filesCount: data.filesCount || Object.keys(files).length,
+        languages,
+        files,
+        platform: data.platform || 'unknown',
+        editor: data.editor || 'unknown',
+        isOfflineSync: !!data.isOfflineSync
       };
       
       // Create coding session
       const codingSession = await CodingSession.create([sessionData], { session });
       
       // Update daily summary with session data
-      const dateStr = data.startTime.toISOString().split('T')[0];
+      const dateStr = startTime.toISOString().split('T')[0];
       const date = new Date(dateStr);
       
       let dailySummary = await DailySummary.findOne({
@@ -265,34 +289,53 @@ const ActivityService = {
       
       // If no daily summary exists for this date, create one
       if (!dailySummary) {
+        const languageEntries = [];
+        
+        // Ensure languages are properly formatted
+        try {
+          for (const [name, seconds] of Object.entries(languages)) {
+            if (name && typeof seconds === 'number') {
+              languageEntries.push({
+                name,
+                seconds
+              });
+            }
+          }
+        } catch (e) {
+          Logger.warn(`Error processing languages for daily summary: ${e.message}`);
+        }
+        
         dailySummary = await DailySummary.create([{
           user: data.userId,
           date,
-          totalSeconds: data.durationSeconds,
-          languages: Object.entries(data.languages).map(([name, seconds]) => ({
-            name,
-            seconds
-          })),
+          totalSeconds: durationSeconds,
+          languages: languageEntries,
           projects: [] // Projects can be extracted from file paths if needed
         }], { session });
         dailySummary = dailySummary[0];
       } else {
         // Update total seconds
-        dailySummary.totalSeconds += data.durationSeconds;
+        dailySummary.totalSeconds += durationSeconds;
         
         // Update language stats
-        Object.entries(data.languages).forEach(([name, seconds]) => {
-          const langIndex = dailySummary.languages.findIndex(l => l.name === name);
-          
-          if (langIndex >= 0) {
-            dailySummary.languages[langIndex].seconds += seconds;
-          } else {
-            dailySummary.languages.push({
-              name,
-              seconds
-            });
-          }
-        });
+        try {
+          Object.entries(languages).forEach(([name, seconds]) => {
+            if (!name || typeof seconds !== 'number') return;
+            
+            const langIndex = dailySummary.languages.findIndex(l => l.name === name);
+            
+            if (langIndex >= 0) {
+              dailySummary.languages[langIndex].seconds += seconds;
+            } else {
+              dailySummary.languages.push({
+                name,
+                seconds
+              });
+            }
+          });
+        } catch (e) {
+          Logger.warn(`Error updating language stats: ${e.message}`);
+        }
         
         await dailySummary.save({ session });
       }
@@ -301,7 +344,7 @@ const ActivityService = {
       return codingSession[0];
     } catch (error) {
       await session.abortTransaction();
-      Logger.error('Error recording session', error);
+      Logger.error(`Error recording session: ${error.message}`, error);
       throw error;
     } finally {
       session.endSession();

@@ -18,16 +18,57 @@ This repository contains the backend code for CodingCam, a system for tracking a
 
 ## API Endpoints
 
-The backend exposes several REST API endpoints for managing users, projects, coding activity, and other data.  (A more detailed API documentation would typically be provided here, perhaps using a tool like Swagger/OpenAPI.  For this example, I'll list a few key endpoints.)
+This section documents the REST API endpoints provided by the CodingCam backend.  Most endpoints require authentication using a JSON Web Token (JWT) in the `Authorization` header (e.g., `Authorization: Bearer <token>`).
 
-*   `/api/users/register`:  Registers a new user.
-*   `/api/users/login`:  Logs in an existing user and returns a JWT.
-*   `/api/users/me`:  Gets the currently logged-in user's profile.
-*   `/api/projects`:  Manages user projects (create, read, update, delete).
-*   `/api/activity`:  Receives and stores coding activity data from the extension.
-*   `/api/reports`:  Provides aggregated coding activity data for reports.
-*   `/api/leaderboard`:  Provides data for the leaderboard.
-* `/api/upload-avatar`: Handles the avatar images.
+### Authentication
+
+| Method | Endpoint                 | Description                                                     | Requires Auth |
+| ------ | ------------------------ | --------------------------------------------------------------- | ------------- |
+| POST   | `<your-backend-url>/api/auth/register` | Registers a new user.  Expects user data in the request body. | No            |
+| POST   | `<your-backend-url>/api/auth/login`    | Logs in an existing user. Expects credentials in the body.    | No            |
+| GET    | `<your-backend-url>/api/auth/verify` | Checks if the provided JWT is valid.                       | Yes           |
+
+### User
+
+| Method | Endpoint                         | Description                                                                 | Requires Auth |
+| ------ | -------------------------------- | --------------------------------------------------------------------------- | ------------- |
+| GET    | `<your-backend-url>/api/users/profile` | Gets the profile of the currently authenticated user.                     | Yes           |
+| PUT    | `<your-backend-url>/api/users/profile` | Updates the profile of the currently authenticated user.                   | Yes           |
+
+### Settings
+
+| Method | Endpoint                         | Description                                      | Requires Auth |
+| ------ | -------------------------------- | ------------------------------------------------ | ------------- |
+| GET    | `<your-backend-url>/api/users/settings` | Gets the settings of the authenticated user.    | Yes           |
+| PUT    | `<your-backend-url>/api/users/settings` | Updates the settings of the authenticated user. | Yes           |
+| POST    | `<your-backend-url>/api/users/location` | Updates the user's location.                  | Yes           |
+
+### Analytics
+
+| Method | Endpoint                                  | Description                                                                                                                                | Requires Auth |
+| ------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| GET    | `<your-backend-url>/api/analytics/daily`     | Gets daily coding statistics for the authenticated user.                                                                                 | Yes           |
+| GET    | `<your-backend-url>/api/analytics/languages` | Gets coding statistics aggregated by language for the authenticated user.                                                                   | Yes           |
+| GET    | `<your-backend-url>/api/analytics/projects`  | Gets coding statistics aggregated by project for the authenticated user.                                                                  | Yes           |
+| GET    | `<your-backend-url>/api/analytics/profile` | Gets a summary of the authenticated user's profile, likely related to analytics data (e.g. total coding time, most used language, etc.) | Yes          |
+| GET    | `<your-backend-url>/api/analytics/report`    | Gets a comprehensive report of coding activity, likely supporting query parameters for date ranges, filtering, etc.                         | Yes           |
+
+### Leaderboard
+
+| Method | Endpoint                             | Description                               | Requires Auth |
+| ------ | ------------------------------------ | ----------------------------------------- | ------------- |
+| GET    | `<your-backend-url>/api/leaderboard` | Gets the leaderboard data (all users).    | No            |
+
+### Extension
+| Method | Endpoint                             | Description                               | Requires Auth |
+| ------ | ------------------------------------ | ----------------------------------------- | ------------- |
+| POST   | `<your-backend-url>/api/extension/*` | Likely handles all data from the extension   | Yes/No     |
+
+### Other
+| Method | Endpoint                             | Description                               | Requires Auth |
+| ------ | ------------------------------------ | ----------------------------------------- | ------------- |
+| GET   | `<your-backend-url>/health` | Checks the health of the API.    | No            |
+| GET    | `<your-backend-url>/status` | Returns operational status of the backend.    | No            |
 
 ## Getting Started
 

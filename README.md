@@ -132,5 +132,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgements
 
-*   Provides data to the [CodingCam Frontend]([<your-frontend-repo-url>](https://github.com/Haseeb-Arshad/CodingCam).
+*   Provides data to the [CodingCam Frontend](https://github.com/Haseeb-Arshad/CodingCam).
 *   Receives data from the [CodingCam Extension](https://github.com/Haseeb-Arshad/codingcam-extension).

@@ -26,6 +26,10 @@ const UserSchema = new Schema(
       type: String,
       trim: true,
     },
+    profilePicture: {
+      type: String,
+      default: '', // URL to default avatar
+    },
     country: {
       type: String,
       trim: true,
@@ -34,16 +38,61 @@ const UserSchema = new Schema(
       type: String,
       trim: true,
     },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number],
+        default: [0, 0]
+      },
+      enabled: {
+        type: Boolean,
+        default: false
+      },
+      lastUpdated: {
+        type: Date
+      }
+    },
     apiKey: {
       type: String,
       unique: true,
       sparse: true, // Allows null values and only applies uniqueness to non-null values
     },
+    settings: {
+      emailNotifications: {
+        type: Boolean,
+        default: true
+      },
+      desktopNotifications: {
+        type: Boolean,
+        default: true
+      },
+      theme: {
+        type: String,
+        enum: ['light', 'dark'],
+        default: 'light'
+      },
+      language: {
+        type: String,
+        enum: ['en', 'es', 'fr'],
+        default: 'en'
+      },
+      locationTracking: {
+        type: Boolean,
+        default: false
+      }
+    }
   },
   {
     timestamps: true,
   }
 );
+
+// Create a geospatial index for location-based queries
+UserSchema.index({ location: '2dsphere' });
 
 // Generate a unique API key
 UserSchema.methods.generateApiKey = function() {

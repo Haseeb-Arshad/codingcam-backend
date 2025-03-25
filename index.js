@@ -11,16 +11,19 @@ const frontendRoutes = require('./src/routes/frontendRoutes');
 const { errorHandler } = require('./src/middleware/errorHandler');
 const connectDB = require('./src/config/database');
 const Logger = require('./src/utils/logger');
+const net = require('net');
  
 // Connect to MongoDB
 connectDB();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(bodyParser.json());
 app.use(cors());
+
+// Increase JSON body size limit for handling larger images
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // Add HTTP request logging
 app.use(Logger.httpLogger);
@@ -44,9 +47,34 @@ app.get('/health', (req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-// Start the server
-app.listen(PORT, () => {
-  Logger.info(`Backend server running on http://localhost:${PORT}`);
-  Logger.info(`Frontend API available at http://localhost:${PORT}/frontend`);
-  Logger.info(`Extension API available at http://localhost:${PORT}/api/extension`);
+// Function to find an available port
+const findAvailablePort = (startPort, callback) => {
+  const server = net.createServer();
+  
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      // Port is in use, try the next one
+      findAvailablePort(startPort + 1, callback);
+    } else {
+      console.error('Server error:', err);
+    }
+  });
+
+  server.listen(startPort, () => {
+    const port = server.address().port;
+    server.once('close', () => {
+      callback(port);
+    });
+    server.close();
+  });
+};
+
+// Start the server on an available port
+const DEFAULT_PORT = parseInt(process.env.PORT || '3001', 10);
+findAvailablePort(DEFAULT_PORT, (port) => {
+  app.listen(port, () => {
+    Logger.info(`Backend server running on http://localhost:${port}`);
+    Logger.info(`Frontend API available at http://localhost:${port}/frontend`);
+    Logger.info(`Extension API available at http://localhost:${port}/api/extension`);
+  });
 }); 

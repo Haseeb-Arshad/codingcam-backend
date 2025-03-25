@@ -257,21 +257,21 @@ const ActivityService = {
         data.durationSeconds : 
         Math.floor((endTime - startTime) / 1000);
       
-      // Convert objects to Maps for Mongoose
-      const filesMap = new Map();
-      const languagesMap = new Map();
+      // Create new Maps for Mongoose
+      const filesMap = new mongoose.Types.Map();
+      const languagesMap = new mongoose.Types.Map();
       
       // Process files
       try {
         Object.entries(files).forEach(([filePath, fileData]) => {
-          // Sanitize file path to remove problematic characters for MongoDB
+          // Sanitize file path
           const sanitizedPath = filePath.replace(/\\/g, '/');
           filesMap.set(sanitizedPath, {
-            edits: fileData.edits || 0,
-            duration: fileData.duration || 0,
+            edits: parseInt(fileData.edits) || 0,
+            duration: parseInt(fileData.duration) || 0,
             language: fileData.language || 'unknown',
-            lines: fileData.lines || 0,
-            keystrokes: fileData.keystrokes || 0
+            lines: parseInt(fileData.lines) || 0,
+            keystrokes: parseInt(fileData.keystrokes) || 0
           });
         });
       } catch (e) {
@@ -281,8 +281,8 @@ const ActivityService = {
       // Process languages
       try {
         Object.entries(languages).forEach(([language, seconds]) => {
-          if (language && typeof seconds === 'number') {
-            languagesMap.set(language, seconds);
+          if (language && !isNaN(Number(seconds))) {
+            languagesMap.set(language, Number(seconds));
           }
         });
       } catch (e) {
@@ -325,14 +325,14 @@ const ActivityService = {
         
         // Ensure languages are properly formatted for array storage
         try {
-          for (const [name, seconds] of languagesMap.entries()) {
+          languagesMap.forEach((seconds, name) => {
             if (name && typeof seconds === 'number') {
               languageEntries.push({
                 name,
                 seconds
               });
             }
-          }
+          });
         } catch (e) {
           Logger.warn(`Error processing languages for daily summary: ${e.message}`);
         }
@@ -342,7 +342,7 @@ const ActivityService = {
           date,
           totalSeconds: durationSeconds,
           languages: languageEntries,
-          projects: [] // Projects can be extracted from file paths if needed
+          projects: []
         }], { session });
         dailySummary = dailySummary[0];
       } else {
@@ -351,8 +351,8 @@ const ActivityService = {
         
         // Update language stats
         try {
-          for (const [name, seconds] of languagesMap.entries()) {
-            if (!name || typeof seconds !== 'number') continue;
+          languagesMap.forEach((seconds, name) => {
+            if (!name || typeof seconds !== 'number') return;
             
             const langIndex = dailySummary.languages.findIndex(l => l.name === name);
             
@@ -364,7 +364,7 @@ const ActivityService = {
                 seconds
               });
             }
-          }
+          });
         } catch (e) {
           Logger.warn(`Error updating language stats: ${e.message}`);
         }

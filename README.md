@@ -1,13 +1,3 @@
-
-**Key Changes in Frontend README:**
-
-*   **Cross-referencing:** Added links to the Backend and Extension repositories in the Overview and Acknowledgements sections.
-*   **Repository URL Placeholder:**  Reminded you to replace `<repository_url>` with the *actual* URL of your frontend repository.
-* **Backend URL Placeholder:** Make sure you change the example with your actual backend URL.
-
-### 2. CodingCam Backend
-
-```markdown
 # CodingCam - Backend
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

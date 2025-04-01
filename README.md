@@ -120,7 +120,7 @@ This section documents the REST API endpoints provided by the CodingCam backend.
     yarn dev
     ```
 
-    This will start the backend server, typically on port 5000 (or the port you specified in your `.env` file).
+    This will start the backend server, typically on port 5000 (or the port you specified in your `.env` file)..
 
 ## Contributing
 
